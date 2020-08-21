@@ -511,7 +511,6 @@ public class AutoFish {
             return false;
         }
         ItemStack activeFishingRod = findActiveFishingRod();
-        activeFishingRod.getItem().
         return false;
         // return activeFishingRod.getItem().getPropertyGetter(new ResourceLocation("cast")).call(activeFishingRod, this.minecraftClient.world, this.player) > 0F;
     }
