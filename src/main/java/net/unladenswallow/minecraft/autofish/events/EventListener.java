@@ -3,7 +3,7 @@ package net.unladenswallow.minecraft.autofish.events;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.ExperienceOrbEntity;
 import net.minecraft.util.SoundEvents;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraftforge.client.event.sound.PlaySoundEvent;
 import net.minecraftforge.event.TickEvent.ClientTickEvent;
 import net.minecraftforge.event.TickEvent.Phase;
@@ -15,23 +15,23 @@ import net.unladenswallow.minecraft.autofish.AutoFish;
 import net.unladenswallow.minecraft.autofish.config.AutoFishModConfig;
 
 public class EventListener { // implements IWorldEventListener {
-    
+
     // The core AutoFish logic that we will use to respond to events
     private AutoFish _autoFish;
-    
+
     public EventListener(AutoFish autoFish) {
         _autoFish = autoFish;
     }
 
-    
+
     /**********************************************************************/
     /***************   MinecraftForge.EVENT_BUS Events  *******************/
     /**********************************************************************/
-    
-    
+
+
     /**
      * The main AutoFish algorithm occurs on each client tick
-     * 
+     *
      * @param event
      */
     @SubscribeEvent
@@ -40,10 +40,10 @@ public class EventListener { // implements IWorldEventListener {
             _autoFish.onClientTick();
         }
     }
-    
+
     /**
      * The Fast Fishing option is implemented on server tick
-     * 
+     *
      * @param event
      */
     @SubscribeEvent
@@ -57,24 +57,24 @@ public class EventListener { // implements IWorldEventListener {
             _autoFish.triggerBites();
         }
     }
-    
+
     /**
      * Use the PlaySoundEvent to listen for bobber splashing
-     * 
+     *
      * @param event
      */
     @SubscribeEvent
     public void onPlaySoundEvent(PlaySoundEvent event) {
         if (AutoFishModConfig.autofishEnabled() && SoundEvents.ENTITY_FISHING_BOBBER_SPLASH.getName() == event.getSound().getSoundLocation()) {
-            _autoFish.onBobberSplashDetected(event.getSound().getX(), event.getSound().getY(), event.getSound().getZ());
+            _autoFish.onBobberSplashDetected((float) event.getSound().getX(), (float) event.getSound().getY(), (float) event.getSound().getZ());
         }
     }
-    
-    
+
+
     /**
      * Use the RightClickItem Event to track some state information whenever
      * the user stops or starts fishing.
-     * 
+     *
      * @param event
      */
     @SubscribeEvent
@@ -84,11 +84,11 @@ public class EventListener { // implements IWorldEventListener {
             _autoFish.onPlayerUseItem(event.getHand());
         }
     }
-    
-    
+
+
     /**
      * Trigger saving of configuration when changed by the user
-     * 
+     *
      * @param event
      */
 //    @SubscribeEvent
@@ -103,7 +103,7 @@ public class EventListener { // implements IWorldEventListener {
         if (AutoFishModConfig.autofishEnabled() && event.getWorld().isRemote) {
             Entity entity = event.getEntity();
             if (entity instanceof ExperienceOrbEntity) {
-                Vec3d entityPosition = entity.getPositionVec();
+                Vector3d entityPosition = entity.getPositionVec();
                 _autoFish.onXpOrbAdded(entityPosition.x, entityPosition.y, entityPosition.z);
             }
         }
@@ -113,13 +113,13 @@ public class EventListener { // implements IWorldEventListener {
     /**********************************************************************/
     /******************   WorldEventListener Events  **********************/
     /**********************************************************************/
-    
-    
+
+
 //    @Override
 //    public void addParticle(IParticleData particleData, boolean alwaysRender, double x, double y, double z,
 //            double xSpeed, double ySpeed, double zSpeed) {
 //        addParticle(particleData, alwaysRender, false, x, y, z, xSpeed, ySpeed, zSpeed);
-//        
+//
 //    }
 //
 //

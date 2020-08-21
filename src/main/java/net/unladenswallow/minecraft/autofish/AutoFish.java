@@ -15,13 +15,12 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.ActionResultType;
 import net.minecraft.util.Hand;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.vector.Vector3i;
 import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.world.dimension.DimensionType;
+import net.minecraft.world.World;
 import net.minecraftforge.fml.ForgeI18n;
 import net.unladenswallow.minecraft.autofish.config.AutoFishModConfig;
 import net.unladenswallow.minecraft.autofish.util.Logger;
@@ -29,7 +28,7 @@ import net.unladenswallow.minecraft.autofish.util.ReflectionUtils;
 
 /**
  * The primary state and logic controller for the AutoFish functionality
- * 
+ *
  * @author FreneticFeline
  *
  */
@@ -48,7 +47,7 @@ public class AutoFish {
     private long closeBobberSplashDetectedAt = 0L;
 //    private long exactBobberSplashDetectedAt = 0L;
     private Random rand;
-    
+
     private static final int TICKS_PER_SECOND = 20;
 
     /** How long to suppress checking for a bite after starting to reel in.  If we check for a bite while reeling
@@ -63,50 +62,50 @@ public class AutoFish {
     private static final int AUTOFISH_BREAKPREVENT_THRESHOLD = 2;
 
     /** The threshold for vertical movement of the fish hook that determines when a fish is biting, if using
-        the movement method of detection. 
+        the movement method of detection.
         and the movement threshold that, combined with other factors, is a probable indicator that a fish is biting */
     private static final double MOTION_Y_THRESHOLD = -0.05d;
     private static final double MOTION_Y_MAYBE_THRESHOLD = -0.03d;
-    
+
     /** The number of ticks to set as the "catchable delay" when Fast Fishing is enabled. *
      * (Vanilla ticksCatchableDelay is random between 20 and 80, but we seem to have trouble catching
      * it if it is less than 40) **/
     private static final int FAST_FISH_CATCHABLE_DELAY_TICKS = 40;
     private static final int FAST_FISH_DELAY_VARIANCE = 40;
-    
+
     /** The maximum number of ticks that is is reasonable for a fish hook to be flying in the air after a cast */
     private static final int MAX_HOOK_FLYING_TIME_TICKS = 120;
-    
+
     /** The amount of time to wait for a fish before something seems wrong and we want to recast **/
     private static final int MAX_WAITING_TIME_SECONDS = 60;
-    
-    /** The distance (squared) threshold for determining that a water wake is "close" to the fish Hook 
+
+    /** The distance (squared) threshold for determining that a water wake is "close" to the fish Hook
      * and "most certainly at" the fish Hook **/
     private static final double CLOSE_WATER_WAKE_THRESHOLD = 1.0d;
 //    private static final double EXACT_WATER_WAKE_THRESHOLD = 0.3d;
-    
+
     /** The number of ticks to wait after detecting a "close" or "exact" water wake before reeling in **/
     private static final int CLOSE_WATER_WAKE_DELAY_TICKS = 30;
 //    private static final int EXACT_WATER_WAKE_DELAY_TICKS = 20;
-    
+
     /** The distance (squared) threshold for determining that a bobber splash sound is "close" to the fish Hook
      * and "most certainly at" the fish Hook **/
     private static final double CLOSE_BOBBER_SPLASH_THRESHOLD = 2.0d;
 //    private static final double EXACT_BOBBER_SPLASH_THRESHOLD = 0.5d;
-    
-    
+
+
     /*************  CONSTRUCTOR  ***************/
-    
-    
+
+
     public AutoFish() {
         this.minecraftClient = Minecraft.getInstance();
         this.rand = new Random();
     }
 
-    
-    
+
+
     /*************  EVENTS *************/
-    
+
     /**
      * Callback from EventListener for ClientTickEvent
      */
@@ -119,7 +118,7 @@ public class AutoFish {
             update();
         }
     }
-    
+
     public void onBobberSplashDetected(float x, float y, float z) {
         if (playerHookInWater(this.player)) {
             FishingBobberEntity hook = this.player.fishingBobber;
@@ -132,16 +131,16 @@ public class AutoFish {
 //                    if (xzDistanceFromHook <= EXACT_BOBBER_SPLASH_THRESHOLD) {
 //    //                    AutoFishLogger.info("[%d] Exact bobber splash at %f /  %f", getGameTime(), xzDistanceFromHook, yDifference);
 //                        this.exactBobberSplashDetectedAt = getGameTime();
-//                    } 
+//                    }
             }
         }
     }
-    
+
     /**
      * Update tracking state each time the player starts or stops fishing.
      * Triggered each time the player right-clicks with an item (and when a right-click
      * has been programmatically triggered).
-     * 
+     *
      */
     public void onPlayerUseItem(Hand hand) {
         if (!playerIsHoldingRod()) {
@@ -169,7 +168,7 @@ public class AutoFish {
             this.player.fishingBobber = null;
         }
     }
-    
+
     private boolean isUseOfNonRodInMainHand(Hand hand) {
         return hand == Hand.MAIN_HAND && !isUsableFishingRod(this.player.getHeldItemMainhand());
     }
@@ -179,7 +178,7 @@ public class AutoFish {
     /**
      * Callback from the WorldEventListener to tell us whenever a WATER_WAKE particle
      * is spawned in the world.
-     * 
+     *
      * @param x
      * @param y
      * @param z
@@ -187,8 +186,8 @@ public class AutoFish {
     public void onWaterWakeDetected(double x, double y, double z) {
         if (this.minecraftClient != null && this.minecraftClient.player != null && playerHookInWater(this.minecraftClient.player)) {
             FishingBobberEntity hook = this.minecraftClient.player.fishingBobber;
-            Vec3d hookPosition = hook.getPositionVec();
-            double distanceFromHook = new BlockPos(x, y, z).distanceSq(new Vec3i(hookPosition.x, hookPosition.y, hookPosition.z));
+            Vector3d hookPosition = hook.getPositionVec();
+            double distanceFromHook = new BlockPos(x, y, z).distanceSq(new Vector3i(hookPosition.x, hookPosition.y, hookPosition.z));
             if (distanceFromHook <= CLOSE_WATER_WAKE_THRESHOLD) {
                 if (this.closeWaterWakeDetectedAt <= 0) {
 //                    AutoFishLogger.info("[%d] Close water wake at %f", getGameTime(), distanceFromHook);
@@ -205,27 +204,27 @@ public class AutoFish {
     }
 
     /**
-     * Callback from the WorldEventListener to tell us whenever an XP Orb is 
+     * Callback from the WorldEventListener to tell us whenever an XP Orb is
      * added to the world.
-     * 
+     *
      * Use this information to try to determine whether we actually caught something
      * last time we reeled in.
-     * 
+     *
      * @param entity
      */
     public void onXpOrbAdded(double x, double y, double z) {
         if (this.player != null) {
-            double distanceFromPlayer = this.player.getPosition().distanceSq(new Vec3i(x, y, z));
+            double distanceFromPlayer = this.player.func_233580_cy_().distanceSq(new Vector3i(x, y, z));
             if (distanceFromPlayer < 2.0d) {
                 this.xpLastAddedAt = getGameTime();
             }
         }
     }
 
-    
+
     /***********  CORE LOGIC ****************/
 
-    
+
     /**
      * Update the state of everything related to AutoFish functionality,
      * and trigger appropriate actions.
@@ -248,41 +247,41 @@ public class AutoFish {
                         }
                     } else {
                         Logger.debug("Player cast manually while recast was scheduled");
-                    }                        
+                    }
                     resetReelDelay();
                     resetCastSchedule();
                     resetBiteTracking();
                 }
-                
+
                 if (AutoFishModConfig.entityClearProtectEnabled()) {
                     checkForEntityClear();
                 }
-                
+
                 checkForMissedBite();
-                
+
                 /**
                  * This method works, but has been disabled in favor of the method that affects all
                  * players in the single-player world.
                  * See onServerTickEvent()
-                 * 
+                 *
                 if (ModAutoFish.config_autofish_fastFishing && playerHookInWater() && !isDuringReelDelay()) {
                     triggerBite();
                 }
-                */                
+                */
             } else {
                 this.isFishing = false;
             }
         }
     }
-    
+
 
     /***********  BITE DETECTION ****************/
-    
-    
+
+
     /**
      * Determine whether a fish is currently biting the player's fish hook.
      * Different methods are used for single player and multiplayer.
-     * 
+     *
      * @return
      */
     private boolean isFishBiting() {
@@ -306,7 +305,7 @@ public class AutoFish {
     /**
      * Determine whether a fish is biting the player's hook, using the server-side player entity.
      * This only works in Single Player, but is 100% accurate.
-     * 
+     *
      * @param serverPlayerEntity
      * @return
      * @throws NumberFormatException
@@ -327,12 +326,12 @@ public class AutoFish {
         }
         return false;
     }
-    
+
 
     /**
      * Try to determine if a fish is biting the player's hook based on the state of the client world.
      * It is not 100% accurate, but it's pretty good.
-     * 
+     *
      * @return
      */
     private boolean isFishBiting_fromClientWorld() {
@@ -351,9 +350,9 @@ public class AutoFish {
          *     there is a little hook movement (not enough to cross the threshold) and also another indication,
          *     then it's probably a bite, and we can get about 10% more accuracy, still with very few false positives.
          */
-        return isFishBiting_fromMovement() || isFishBiting_fromBobberSound() || isFishBiting_fromWaterWake() || isFishBiting_fromAll(); 
+        return isFishBiting_fromMovement() || isFishBiting_fromBobberSound() || isFishBiting_fromWaterWake() || isFishBiting_fromAll();
     }
-    
+
     private boolean isFishBiting_fromBobberSound() {
         /** If a bobber sound has been played at the fish hook, a fish is already biting **/
         if (AutoFishModConfig.aggressiveBiteDetectionEnabled() && this.closeBobberSplashDetectedAt > 0) {
@@ -362,11 +361,11 @@ public class AutoFish {
         }
         return false;
     }
-    
+
     private boolean isFishBiting_fromWaterWake() {
         /** An water wake indicates a probable bite "very soon", so make sure enough time has passed **/
         if (AutoFishModConfig.aggressiveBiteDetectionEnabled()
-                && this.closeWaterWakeDetectedAt > 0 
+                && this.closeWaterWakeDetectedAt > 0
                 && getGameTime() > this.closeWaterWakeDetectedAt + CLOSE_WATER_WAKE_DELAY_TICKS) {
             Logger.debug("Detected bite by WATER_WAKE");
             return true;
@@ -376,28 +375,28 @@ public class AutoFish {
 
     private boolean isFishBiting_fromMovement() {
         FishingBobberEntity fishingBobber = this.player.fishingBobber;
-        if (fishingBobber != null 
+        if (fishingBobber != null
                 // Checking for no X and Z motion prevents a false alarm when the hook is moving through the air
-                && fishingBobber.getMotion().x == 0 
-                && fishingBobber.getMotion().z == 0 
+                && fishingBobber.getMotion().x == 0
+                && fishingBobber.getMotion().z == 0
                 && fishingBobber.getMotion().y < MOTION_Y_THRESHOLD) {
             Logger.debug("Detected bite by MOVEMENT");
             return true;
         }
         return false;
     }
-    
+
     private boolean isFishBiting_fromAll() {
         /** Assume a bit if the following conditions are true:
          * (1) There is at least a little Y motion of the fish hook
          * (2) Either (a) There has been a "close" bobber splash very recently; OR
-         *            (b) A "close" water wake was detected long enough ago  
+         *            (b) A "close" water wake was detected long enough ago
          */
         FishingBobberEntity fishingBobber = this.player.fishingBobber;
-        if (fishingBobber != null 
+        if (fishingBobber != null
                 // Checking for no X and Z motion prevents a false alarm when the hook is moving through the air
-                && fishingBobber.getMotion().x == 0 
-                && fishingBobber.getMotion().z == 0 
+                && fishingBobber.getMotion().x == 0
+                && fishingBobber.getMotion().z == 0
                 && fishingBobber.getMotion().y < MOTION_Y_MAYBE_THRESHOLD) {
 //            long totalWorldTime = getGameTime();
             if (recentCloseBobberSplash() || recentCloseWaterWake()) {
@@ -407,19 +406,19 @@ public class AutoFish {
         }
         return false;
     }
-    
-    
+
+
     /******************  STATE HELPERS  *****************/
-    
-    
+
+
     private boolean isDuringReelDelay() {
         return (this.startedReelDelayAt != 0 && getGameTime() < this.startedReelDelayAt + REEL_TICK_DELAY);
     }
-    
+
     private boolean isDuringCastDelay() {
         return (this.startedCastDelayAt != 0 && getGameTime() < this.startedCastDelayAt + CAST_TICK_DELAY);
     }
-    
+
     private boolean playerHookInWater(PlayerEntity player) {
         if (player == null || player.fishingBobber == null) {
             return false;
@@ -427,8 +426,8 @@ public class AutoFish {
         // Sometimes, particularly around the time of a bite, the hook entity comes slightly out of the
         // water block, so also check a fraction of a block distance lower to see if that is water.
         // (EntityFishHook.isInWater() seems to be completely broken in 1.13)
-        BlockState hookBlockState = player.fishingBobber.getEntityWorld().getBlockState(new BlockPos(player.fishingBobber));
-        Vec3d hookPosition = player.fishingBobber.getPositionVec();
+        BlockState hookBlockState = player.fishingBobber.getEntityWorld().getBlockState(new BlockPos(player.fishingBobber.getPositionVec()));
+        Vector3d hookPosition = player.fishingBobber.getPositionVec();
         BlockState justBelowHookBlockState = player.fishingBobber.getEntityWorld().getBlockState(new BlockPos(hookPosition.x, hookPosition.y - 0.25, hookPosition.z));
         boolean hookIsInWater = hookBlockState.getMaterial() == Material.WATER || justBelowHookBlockState.getMaterial() == Material.WATER;
         return hookIsInWater;
@@ -437,7 +436,7 @@ public class AutoFish {
     public boolean playerIsHoldingRod() {
         return findActiveFishingRod() != null;
     }
-    
+
     private boolean isUsableFishingRod(ItemStack itemStack) {
         return (itemStack != null
                 && itemStack.getItem() instanceof FishingRodItem
@@ -446,13 +445,13 @@ public class AutoFish {
 
     private boolean recentCloseBobberSplash() {
         /** Close bobber sound must have been quite recent to indicate probable bite **/
-        if (this.closeBobberSplashDetectedAt > 0 
+        if (this.closeBobberSplashDetectedAt > 0
                 && getGameTime() < this.closeBobberSplashDetectedAt + 20) {
             return true;
         }
         return false;
     }
-    
+
     private boolean recentCloseWaterWake() {
         /** A close water wake indicates probable bite "soon", so make sure enough time has passed **/
         if (this.closeWaterWakeDetectedAt > 0
@@ -461,7 +460,7 @@ public class AutoFish {
         }
         return false;
     }
-    
+
     private boolean somethingSeemsWrong() {
         if (rodIsCast() && !isDuringCastDelay() && !isDuringReelDelay() && hookShouldBeInWater()) {
             if ((playerHookInWater(this.player) || AutoFishModConfig.handleProblemsEnabled()) && waitedLongEnough()) {
@@ -484,37 +483,39 @@ public class AutoFish {
         }
         return false;
     }
-    
+
     private void sendMessageToPlayer(String message) {
-        this.player.sendMessage(new StringTextComponent(String.format("[AutoFish] %s", message)));
+        this.player.sendMessage(new StringTextComponent(String.format("[AutoFish] %s", message)), this.player.getGameProfile().getId());
 
     }
 
 
 
     private boolean hookedAnEntity() {
-        if (this.player.fishingBobber != null && this.player.fishingBobber.caughtEntity != null) {
+        if (this.player.fishingBobber != null && this.player.fishingBobber.func_234607_k_() != null) {
             return true;
         }
         return false;
     }
-    
+
     private boolean waitedLongEnough() {
         return this.startedCastDelayAt > 0 && getGameTime() > this.startedCastDelayAt + (MAX_WAITING_TIME_SECONDS * TICKS_PER_SECOND);
     }
-    
+
     private boolean hookShouldBeInWater() {
         return this.startedCastDelayAt > 0 && getGameTime() > this.startedCastDelayAt + MAX_HOOK_FLYING_TIME_TICKS;
     }
-    
+
     private boolean rodIsCast() {
         if (!playerIsHoldingRod()) {
             return false;
         }
         ItemStack activeFishingRod = findActiveFishingRod();
-        return activeFishingRod.getItem().getPropertyGetter(new ResourceLocation("cast")).call(activeFishingRod, this.minecraftClient.world, this.player) > 0F;
+        activeFishingRod.getItem().
+        return false;
+        // return activeFishingRod.getItem().getPropertyGetter(new ResourceLocation("cast")).call(activeFishingRod, this.minecraftClient.world, this.player) > 0F;
     }
-    
+
     private boolean needToSwitchRods() {
         return AutoFishModConfig.multiRodEnabled() && !playerCanCast();
     }
@@ -522,7 +523,7 @@ public class AutoFish {
     private boolean isTimeToCast() {
         return (this.castScheduledAt > 0 && getGameTime() > this.castScheduledAt + (AutoFishModConfig.recastDelay() * TICKS_PER_SECOND));
     }
-    
+
     private boolean waitingToRecast() {
         return (this.castScheduledAt > 0);
     }
@@ -535,13 +536,13 @@ public class AutoFish {
             if (activeFishingRod == null) {
                 return false;
             }
-    
-            return (!AutoFishModConfig.breakPreventEnabled() 
+
+            return (!AutoFishModConfig.breakPreventEnabled()
                     || (activeFishingRod.getMaxDamage() - activeFishingRod.getDamage() > AUTOFISH_BREAKPREVENT_THRESHOLD)
                     );
         }
     }
-    
+
     private ItemStack findActiveFishingRod() {
         if (this.player == null) {
             return null;
@@ -555,14 +556,14 @@ public class AutoFish {
 
     /******************  ACTION HELPERS  *****************/
 
-    
+
     private void showNotificationToPlayer() {
         String enabledPatternName = String.format("chat.autofish.%s", AutoFishModConfig.autofishEnabled() ? "enabled" : "disabled");
         String enabledOrDisabled = ForgeI18n.parseMessage(enabledPatternName);
         sendMessageToPlayer(ForgeI18n.parseMessage("chat.autofish.welcome", enabledOrDisabled, ModAutoFish.keyInputHandler.getOptionsKey()));
         this.notificationShownToPlayer = true;
     }
-    
+
     private void reelIn() {
         playerUseRod();
         // Bug in Forge that doesn't delete the fishing hook entity
@@ -580,11 +581,11 @@ public class AutoFish {
     private void resetCastSchedule() {
         this.castScheduledAt = 0L;
     }
-    
+
     private void resetCastDelay() {
         this.startedCastDelayAt = 0L;
     }
-    
+
     private void scheduleNextCast() {
         this.castScheduledAt = getGameTime();
     }
@@ -611,7 +612,7 @@ public class AutoFish {
 
     /**
      * For all players in the specified world, if they are fishing, trigger a bite.
-     * 
+     *
      * @param world
      */
     public void triggerBites() {
@@ -625,7 +626,7 @@ public class AutoFish {
             }
         }
     }
-    
+
     /**
      * For the current player, trigger a bite on the fish hook.
      */
@@ -642,7 +643,7 @@ public class AutoFish {
             setTicksCatchableDelay(serverfishingBobber, ticks);
         }
     }
-    
+
     private void setTicksCatchableDelay(FishingBobberEntity hook, int ticks) {
         String forgeFieldName = "ticksCatchableDelay";
         String vanillaFieldName = "field_146038_az";
@@ -659,10 +660,10 @@ public class AutoFish {
     }
 
     private ServerPlayerEntity getServerPlayerEntity() {
-        if (this.minecraftClient.getIntegratedServer() == null || this.minecraftClient.getIntegratedServer().getWorld(DimensionType.OVERWORLD) == null) {
+        if (this.minecraftClient.getIntegratedServer() == null || this.minecraftClient.getIntegratedServer().getWorld(World.field_234918_g_) == null) {
             return null;
         } else {
-            return this.minecraftClient.getIntegratedServer().getWorld(DimensionType.OVERWORLD)
+            return this.minecraftClient.getIntegratedServer().getWorld(World.field_234918_g_)
                     .getPlayers((p) -> p.getName().getString().equals(this.minecraftClient.player.getName().getString()))
                     .get(0);
         }
@@ -672,15 +673,15 @@ public class AutoFish {
         Hand rodHand = isUsableFishingRod(this.player.getHeldItemMainhand()) ? Hand.MAIN_HAND : Hand.OFF_HAND;
         this.player.swingArm(rodHand);
         return this.minecraftClient.playerController.processRightClick(
-                this.player, 
+                this.player,
                 this.minecraftClient.world,
                 rodHand);
     }
-    
+
 //    private boolean isInOffHand(ItemStack itemStack) {
 //        return findActiveFishingRod().getEquipmentSlot() == EntityEquipmentSlot.OFFHAND;
 //    }
-    
+
     private void resetBiteTracking() {
         this.xpLastAddedAt = 0L;
         this.closeWaterWakeDetectedAt = 0L;
@@ -693,7 +694,7 @@ public class AutoFish {
         PlayerInventory inventory = this.player.inventory;
         for (int i = 0; i < 9; i++) {
             ItemStack curItemStack = inventory.mainInventory.get(i);
-            if (curItemStack != null 
+            if (curItemStack != null
                     && curItemStack.getItem() instanceof FishingRodItem
                     && (!AutoFishModConfig.breakPreventEnabled() || (curItemStack.getMaxDamage() - curItemStack.getDamage() > AUTOFISH_BREAKPREVENT_THRESHOLD))
                 ) {
@@ -702,7 +703,7 @@ public class AutoFish {
             }
         }
     }
-    
+
     private void checkForEntityClear() {
         if (this.isFishing && !isDuringCastDelay() && (this.player.fishingBobber == null || !this.player.fishingBobber.isAddedToWorld())) {
             sendMessageToPlayer(ForgeI18n.parseMessage("chat.autofish.entityclear"));
@@ -710,7 +711,7 @@ public class AutoFish {
             startFishing();
         }
     }
-    
+
     private void checkForMissedBite() {
         if (playerHookInWater(this.player)) {
           if (this.closeBobberSplashDetectedAt > 0 && getGameTime() > this.closeBobberSplashDetectedAt + 45) {
@@ -719,7 +720,7 @@ public class AutoFish {
           }
       }
     }
-    
+
     private long getGameTime() {
         return this.minecraftClient.world.getGameTime();
     }

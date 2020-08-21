@@ -1,6 +1,7 @@
 package net.unladenswallow.minecraft.autofish.gui;
 
 import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.fml.ForgeI18n;
 import net.minecraftforge.fml.client.gui.widget.ExtendedButton;
 import net.unladenswallow.minecraft.autofish.config.AutoFishModConfig;
@@ -13,9 +14,9 @@ class ConfigGuiButton extends ExtendedButton {
     private ConfigOption configOption;
 
     public ConfigGuiButton(FontRenderer font, int x, int y, int widthIn, int heightIn, String buttonText, IPressable handler) {
-        super(x, y, widthIn, heightIn, buttonText, handler);
+        super(x, y, widthIn, heightIn, new StringTextComponent(buttonText), handler);
     }
-    
+
     public ConfigGuiButton(FontRenderer font, int x, int y, int widthIn, int heightIn, ConfigOption configOption) {
         super(x, y, widthIn, heightIn, getButtonText(configOption), b -> {
             Logger.info("button press handler");
@@ -23,23 +24,23 @@ class ConfigGuiButton extends ExtendedButton {
         });
         this.configOption = configOption;
     }
-    
-    private static String getButtonText(ConfigOption configOption) {
+
+    private static StringTextComponent getButtonText(ConfigOption configOption) {
         if (configOption.valueType == ValueType.BOOL) {
-            return configOption.boolValue ? ForgeI18n.parseMessage("gui.autofish.config.true_display") : ForgeI18n.parseMessage("gui.autofish.config.false_display");
+            return new StringTextComponent(configOption.boolValue ? ForgeI18n.parseMessage("gui.autofish.config.true_display") : ForgeI18n.parseMessage("gui.autofish.config.false_display"));
         } else if (configOption.valueType == ValueType.INT) {
-            return Integer.toString(configOption.intValue);
+            return new StringTextComponent(Integer.toString(configOption.intValue));
         } else {
             Logger.info("Don't understand %s", configOption.valueType.name());
         }
-        return "UNSUPPORTED-CONFIG";
-    }
-    
-    @Override
-    public void onClick(double mouseX, double mouseY) {
-        AutoFishModConfig.toggleConfigValue(this.configOption.configPath);
-        this.setMessage(getButtonText(this.configOption));
+        return new StringTextComponent("UNSUPPORTED-CONFIG");
     }
 
-    
+    @Override
+    public void func_230982_a_(double mouseX, double mouseY) {
+        AutoFishModConfig.toggleConfigValue(this.configOption.configPath);
+        this.func_238482_a_(getButtonText(this.configOption));
+    }
+
+
 }

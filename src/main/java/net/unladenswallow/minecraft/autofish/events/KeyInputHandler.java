@@ -12,16 +12,16 @@ import net.unladenswallow.minecraft.autofish.gui.ConfigGui;
 public class KeyInputHandler {
 
     public KeyBinding options;
-    
+
     public KeyInputHandler() {
         init();
     }
-    
+
     public void init() {
         options = new KeyBinding("key.options", InputMappings.getInputByName("key.keyboard.o").getKeyCode(), "key.categories.mod_autofish");
         ClientRegistry.registerKeyBinding(options);
     }
-    
+
     @SubscribeEvent
     public void onKeyInput(InputEvent.KeyInputEvent event) {
         if (this.options.isPressed()) {
@@ -32,6 +32,6 @@ public class KeyInputHandler {
     }
 
     public String getOptionsKey() {
-        return KeyBinding.getDisplayString("key.options").get();
+        return KeyBinding.getDisplayString("key.options").get().getString();
     }
 }
