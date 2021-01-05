@@ -12,8 +12,10 @@ import net.minecraft.client.gui.widget.Widget;
 import net.minecraft.client.renderer.IRenderTypeBuffer;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.math.vector.TransformationMatrix;
+import net.minecraft.util.text.ITextProperties;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.fml.ForgeI18n;
+import net.minecraftforge.fml.client.gui.GuiUtils;
 import net.minecraftforge.fml.client.gui.widget.ExtendedButton;
 import net.unladenswallow.minecraft.autofish.config.AutoFishModConfig;
 import net.unladenswallow.minecraft.autofish.config.ConfigOption;
@@ -37,21 +39,21 @@ public class ConfigGui extends Screen {
     }
 
     @Override
-    public void func_230430_a_(MatrixStack matfixStack, int mouseX, int mouseY, float partialTicks) {
-        this.func_230446_a_(matfixStack);
-        this.drawString(ForgeI18n.parseMessage("gui.autofish.config.title"), this.field_230708_k_ / 2, 10, DRAW_STRING_MAGIC_NUMBER);
-        this.drawString(AutoFishModConfig.ConfigFilePath, this.field_230708_k_ / 2, 25, DRAW_STRING_MAGIC_NUMBER);
+    public void render(MatrixStack matfixStack, int mouseX, int mouseY, float partialTicks) {
+        this.renderBackground(matfixStack);
+        this.drawString(ForgeI18n.parseMessage("gui.autofish.config.title"), this.width / 2, 10, DRAW_STRING_MAGIC_NUMBER);
+        this.drawString(AutoFishModConfig.ConfigFilePath, this.width / 2, 25, DRAW_STRING_MAGIC_NUMBER);
         int bottomLabelY = 0;
         for (Label label : labels) {
-            label.func_230430_a_(matfixStack, mouseX, mouseY, 1f);
+            label.render(matfixStack, mouseX, mouseY, 1f);
             bottomLabelY = Math.max(bottomLabelY, label.y);
         }
-        super.func_230430_a_(matfixStack, mouseX, mouseY, partialTicks);
-        /* for (Label label : labels) {
-            if (label.func_230449_g_()) {
-                label.renderToolTip(mouseX, mouseY);
+        super.render(matfixStack, mouseX, mouseY, partialTicks);
+        for (Label label : labels) {
+            if (label.isHovered()) {
+                label.renderToolTip(matfixStack, mouseX, mouseY);
             }
-        } */
+        }
     }
 
     public void drawString(String text, int x, int y, int color) {
@@ -71,16 +73,16 @@ public class ConfigGui extends Screen {
 	}
 
     private void closeGui() {
-        this.func_231175_as__();
+        this.onClose();
     }
 
     @Override
-    protected void func_231160_c_() {
-        super.func_231160_c_();
-        int maxAllowedLabelWidth = this.field_230708_k_ - BUTTON_WIDTH - (3 * X_PADDING);
+    protected void init() {
+        super.init();
+        int maxAllowedLabelWidth = this.width - BUTTON_WIDTH - (3 * X_PADDING);
         int labelWidth = Math.min(maxAllowedLabelWidth, getLongestConfigLabelWidth());
-        int labelX = (this.field_230708_k_ - (labelWidth + X_PADDING + BUTTON_WIDTH)) / 2;
-        int buttonX = this.field_230708_k_ - labelX - BUTTON_WIDTH;
+        int labelX = (this.width - (labelWidth + X_PADDING + BUTTON_WIDTH)) / 2;
+        int buttonX = this.width - labelX - BUTTON_WIDTH;
         int buttonIndex = 1;
         this.labels = new ArrayList<Label>();
         for (ConfigOption option : AutoFishModConfig.getOrderedConfigValues()) {
@@ -90,12 +92,12 @@ public class ConfigGui extends Screen {
                     ForgeI18n.parseMessage(String.format("%s.description", option.configLabelI18nPattern)),
                     labelX,
                     rowY+2,
-                    this.field_230708_k_,
-                    this.field_230709_l_));
-            func_230480_a_(new ConfigGuiButton(this.field_230712_o_, buttonX, rowY, BUTTON_WIDTH, BUTTON_HEIGHT, option));
+                    this.width,
+                    this.height));
+            addButton(new ConfigGuiButton(this.font, buttonX, rowY, BUTTON_WIDTH, BUTTON_HEIGHT, option));
             buttonIndex++;
         }
-        func_230480_a_(new ExtendedButton((this.field_230708_k_ - BUTTON_WIDTH) / 2, this.field_230709_l_ - 20 - BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT, new StringTextComponent(ForgeI18n.parseMessage("gui.autofish.config.done")),
+        addButton(new ExtendedButton((this.width - BUTTON_WIDTH) / 2, this.height - 20 - BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_HEIGHT, new StringTextComponent(ForgeI18n.parseMessage("gui.autofish.config.done")),
                 b -> {this.closeGui();}));
     }
 
@@ -105,7 +107,7 @@ public class ConfigGui extends Screen {
         }
         _longestConfigLabelWidth = 1;
         for (ConfigOption option : AutoFishModConfig.getOrderedConfigValues()) {
-            int labelWidth = this.field_230712_o_.getStringWidth(ForgeI18n.parseMessage(option.configLabelI18nPattern));
+            int labelWidth = this.font.getStringWidth(ForgeI18n.parseMessage(option.configLabelI18nPattern));
             if (labelWidth > _longestConfigLabelWidth) {
                 _longestConfigLabelWidth = labelWidth;
             }
@@ -125,7 +127,7 @@ public class ConfigGui extends Screen {
             super(x, y, 200, 20, new StringTextComponent(text));
             this.x = x;
             this.y = y;
-            this.field_230691_m_ = field_230712_o_.FONT_HEIGHT + 2;
+            this.height = font.FONT_HEIGHT + 2;
             this.text = text;
             this.tooltip = tooltip;
             this.screenWidth = screenWidth;
@@ -134,21 +136,26 @@ public class ConfigGui extends Screen {
 
 
         @Override
-        public void func_230430_a_(MatrixStack matfixStack, int mouseX, int mouseY, float p_render_3_) {
-            super.func_230430_a_(matfixStack, mouseX, mouseY, p_render_3_);
-            drawString(this.text, this.x, this.y, DRAW_STRING_MAGIC_NUMBER);
+        public void render(MatrixStack matfixStack, int mouseX, int mouseY, float p_render_3_) {
+            super.render(matfixStack, mouseX, mouseY, p_render_3_);
+            drawString(matfixStack, font, this.text, this.x, this.y, DRAW_STRING_MAGIC_NUMBER);
         }
 
         @Override
-        public void func_230443_a_(MatrixStack matfixStack, int mouseX, int mouseY) {
-            /* GuiUtils.drawHoveringText(
-                    Arrays.asList(this.tooltip),
+        public void renderToolTip(MatrixStack matfixStack, int mouseX, int mouseY) {
+        	List<ITextProperties> list = new ArrayList<>();
+        	for (String line : this.tooltip.split("\n")) {
+        		list.add(new StringTextComponent(line));
+        	}
+            GuiUtils.drawHoveringText(
+                    matfixStack,
+                    list,
                     mouseX,
                     mouseY,
                     this.screenWidth,
                     this.screenHeight,
                     -1,
-                    field_230712_o_); */
+                    font);
 
         }
 

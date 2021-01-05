@@ -214,7 +214,7 @@ public class AutoFish {
      */
     public void onXpOrbAdded(double x, double y, double z) {
         if (this.player != null) {
-            double distanceFromPlayer = this.player.func_233580_cy_().distanceSq(new Vector3i(x, y, z));
+            double distanceFromPlayer = this.player.getPosition().distanceSq(new Vector3i(x, y, z));
             if (distanceFromPlayer < 2.0d) {
                 this.xpLastAddedAt = getGameTime();
             }
@@ -507,12 +507,13 @@ public class AutoFish {
     }
 
     private boolean rodIsCast() {
-        if (!playerIsHoldingRod()) {
+        return false;
+        /* if (!playerIsHoldingRod()) {
             return false;
         }
+
         ItemStack activeFishingRod = findActiveFishingRod();
-        return false;
-        // return activeFishingRod.getItem().getPropertyGetter(new ResourceLocation("cast")).call(activeFishingRod, this.minecraftClient.world, this.player) > 0F;
+        return activeFishingRod.getItem().getPropertyGetter(new ResourceLocation("cast")).call(activeFishingRod, this.minecraftClient.world, this.player) > 0F; */
     }
 
     private boolean needToSwitchRods() {
@@ -659,10 +660,10 @@ public class AutoFish {
     }
 
     private ServerPlayerEntity getServerPlayerEntity() {
-        if (this.minecraftClient.getIntegratedServer() == null || this.minecraftClient.getIntegratedServer().getWorld(World.field_234918_g_) == null) {
+        if (this.minecraftClient.getIntegratedServer() == null || this.minecraftClient.getIntegratedServer().getWorld(World.OVERWORLD) == null) {
             return null;
         } else {
-            return this.minecraftClient.getIntegratedServer().getWorld(World.field_234918_g_)
+            return this.minecraftClient.getIntegratedServer().getWorld(World.OVERWORLD)
                     .getPlayers((p) -> p.getName().getString().equals(this.minecraftClient.player.getName().getString()))
                     .get(0);
         }

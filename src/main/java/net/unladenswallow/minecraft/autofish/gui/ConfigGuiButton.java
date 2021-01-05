@@ -37,9 +37,9 @@ class ConfigGuiButton extends ExtendedButton {
     }
 
     @Override
-    public void func_230982_a_(double mouseX, double mouseY) {
+    public void onClick(double mouseX, double mouseY) {
         AutoFishModConfig.toggleConfigValue(this.configOption.configPath);
-        this.func_238482_a_(getButtonText(this.configOption));
+        this.setMessage(getButtonText(this.configOption));
     }
 
 
